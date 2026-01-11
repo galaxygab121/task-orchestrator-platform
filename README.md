@@ -22,6 +22,44 @@ Kafka topics:
 - Kafka (Confluent images), Postgres 16, Redis 7
 - Docker Compose for local infra
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[Client / curl / UI]
+
+    subgraph API
+        Orchestrator[orchestrator-api<br/>REST + JPA]
+    end
+
+    subgraph Scheduler
+        SchedulerSvc[scheduler-service<br/>Polling + Priorities]
+    end
+
+    subgraph Worker
+        WorkerSvc[worker-service<br/>Kafka Consumer]
+    end
+
+    subgraph Infra
+        Postgres[(PostgreSQL)]
+        Kafka[(Kafka)]
+        DLQ[(jobs.dlq.v1)]
+        Redis[(Redis)]
+    end
+
+    Client -->|POST /api/jobs| Orchestrator
+    Orchestrator -->|persist jobs| Postgres
+
+    SchedulerSvc -->|poll SUBMITTED / QUEUED| Postgres
+    SchedulerSvc -->|publish jobs.v1| Kafka
+
+    Kafka -->|consume jobs.v1| WorkerSvc
+    WorkerSvc -->|update status| Postgres
+    WorkerSvc -->|failed jobs| DLQ
+
+    Redis -. optional .- SchedulerSvc
+```
+
 ## Quickstart
 
 ### 1) Start infrastructure
