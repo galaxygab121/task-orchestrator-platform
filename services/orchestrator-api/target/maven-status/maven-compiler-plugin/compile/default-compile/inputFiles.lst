@@ -1,0 +1,7 @@
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/OrchestratorApiApplication.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/CreateJobRequest.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/JobController.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/JobEntity.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/JobRepository.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/JobResponse.java
+/Users/galaxygab/Desktop/task-orchestrator-platform/services/orchestrator-api/src/main/java/com/gabrielle/orchestrator/jobs/JobStatus.java
