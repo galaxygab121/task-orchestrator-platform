@@ -1,0 +1,25 @@
+# Build output
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+
+# Logs and scratch
+*.log
+logs/
+scripts/__pycache__/
+.claude/settings.local.json
