@@ -1,0 +1,168 @@
+# Local stack: docker compose up --build -d
+# Optional Prometheus: docker compose --profile observability up -d
+
+x-app-env: &app-env
+  DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-orchestrator}
+  DB_USERNAME: ${POSTGRES_USER:-orchestrator}
+  DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  ORCHESTRATOR_RETRY_INITIAL_DELAY: ${ORCHESTRATOR_RETRY_INITIAL_DELAY:-1s}
+  ORCHESTRATOR_RETRY_MAX_DELAY: ${ORCHESTRATOR_RETRY_MAX_DELAY:-8s}
+  LOGGING_STRUCTURED_FORMAT_CONSOLE: ${LOG_FORMAT:-ecs}
+  KAFKA_TOPIC_PARTITIONS: ${KAFKA_TOPIC_PARTITIONS:-6}
+  # Local demo only; the application default is `never`.
+  HEALTH_SHOW_DETAILS: ${HEALTH_SHOW_DETAILS:-always}
+
+x-app-healthcheck: &app-healthcheck
+  interval: 5s
+  timeout: 3s
+  retries: 30
+  start_period: 20s
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orchestrator}
+      POSTGRES_USER: ${POSTGRES_USER:-orchestrator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    environment:
+      # Single-node KRaft (no ZooKeeper). Any fixed base64 UUID works for a local cluster id.
+      CLUSTER_ID: 4L6g3nShTeMCtKAAX86swA
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:${KAFKA_HOST_PORT:-9094}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Topics are created explicitly by the services (3 partitions each).
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    ports:
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9094}:9094"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  orchestrator-api:
+    build:
+      context: .
+      args:
+        MODULE: orchestrator-api
+    image: task-orchestrator/orchestrator-api:local
+    environment:
+      <<: *app-env
+      SERVER_PORT: 8080
+    ports:
+      - "${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+    stop_grace_period: 40s
+
+  scheduler-service:
+    build:
+      context: .
+      args:
+        MODULE: scheduler-service
+    image: task-orchestrator/scheduler-service:local
+    environment:
+      <<: *app-env
+      SERVER_PORT: 8081
+      REDIS_HOST: redis
+      SCHEDULER_MAX_IN_FLIGHT: ${SCHEDULER_MAX_IN_FLIGHT:-8}
+    ports:
+      - "${SCHEDULER_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      # Let the API apply migrations first (Flyway would also serialise concurrent runs).
+      orchestrator-api:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
+    stop_grace_period: 40s
+
+  worker-service:
+    build:
+      context: .
+      args:
+        MODULE: worker-service
+    image: task-orchestrator/worker-service:local
+    environment:
+      <<: *app-env
+      SERVER_PORT: 8082
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      WORKER_TASK_TIMEOUT: ${WORKER_TASK_TIMEOUT:-20s}
+      WORKER_LEASE_DURATION: ${WORKER_LEASE_DURATION:-30s}
+      WORKER_HEARTBEAT_INTERVAL: ${WORKER_HEARTBEAT_INTERVAL:-10s}
+    ports:
+      # A host port range so `--scale worker-service=N` (N <= 3) does not collide.
+      - "${WORKER_PORT_RANGE:-8082-8084}:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      orchestrator-api:
+        condition: service_healthy
+    healthcheck:
+      <<: *app-healthcheck
+      test: ["CMD", "curl", "-fsS", "http://localhost:8082/actuator/health/readiness"]
+    stop_grace_period: 40s
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["observability"]
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - orchestrator-api
+      - scheduler-service
+      - worker-service
+
+volumes:
+  pgdata:

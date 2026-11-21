@@ -31,7 +31,7 @@ public record OrchestratorProperties(
     }
 
     public record Kafka(
-            @DefaultValue("3") int topicPartitions,
+            @DefaultValue("6") int topicPartitions,
             @DefaultValue("1") short replicationFactor) {
     }
 }

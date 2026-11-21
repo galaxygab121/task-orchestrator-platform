@@ -1,0 +1,39 @@
+# python3 scripts/smoke_test.py   (2026-11-21T20:14Z, local Docker Desktop, 1 worker replica)
+[PASS] health UP: orchestrator-api
+[PASS] health UP: scheduler-service
+[PASS] health UP: worker-service
+[PASS] prometheus endpoint exposes orchestrator metrics
+[PASS] OpenAPI document served
+Submitted 15 jobs; waiting up to 120s for completion ...
+[PASS] FIBONACCI F(10)=55 -- status=SUCCEEDED result={'n': 10, 'value': 55}
+[PASS] FIBONACCI F(20)=6765 -- status=SUCCEEDED result={'n': 20, 'value': 6765}
+[PASS] FIBONACCI F(30)=832040 -- status=SUCCEEDED result={'n': 30, 'value': 832040}
+[PASS] FIBONACCI F(35)=9227465 -- status=SUCCEEDED result={'n': 35, 'value': 9227465}
+[PASS] FIBONACCI F(40)=102334155 -- status=SUCCEEDED result={'n': 40, 'value': 102334155}
+[PASS] DATA_SUMMARY summary of 5 values -- status=SUCCEEDED result={'max': 5.0, 'min': 1.0, 'sum': 15.0, 'mean': 3.0, 'count': 5, 'median': 3.0, 'stdDev': 1.4142135623730951}
+[PASS] DATA_SUMMARY summary of 6 values -- status=SUCCEEDED result={'max': 99.0, 'min': -3.0, 'sum': 120.75, 'mean': 20.125, 'count': 6, 'median': 7.0, 'stdDev': 35.56266476235998}
+[PASS] DATA_SUMMARY summary of 100 values -- status=SUCCEEDED result={'max': 100.0, 'min': 1.0, 'sum': 5050.0, 'mean': 50.5, 'count': 100, 'median': 50.5, 'stdDev': 28.86607004772212}
+[PASS] SLEEP slept 200 ms -- status=SUCCEEDED result={'sleptMs': 200}
+[PASS] SLEEP slept 800 ms -- status=SUCCEEDED result={'sleptMs': 800}
+[PASS] SLEEP slept 1500 ms -- status=SUCCEEDED result={'sleptMs': 1500}
+[PASS] SLEEP slept 3000 ms -- status=SUCCEEDED result={'sleptMs': 3000}
+[PASS] transient failure retried then SUCCEEDED -- status=SUCCEEDED attempt=3
+[PASS] retry history shows bounded backoff -- retry 2/4 in 1000ms: simulated transient failure on attempt 1 of first 2; retry 3/4 in 2000ms: simulated transient failure on attempt 2 of first 2
+[PASS] exhausted retries -> FAILED after maxRetries+1 attempts -- status=FAILED attempt=2 lastError=simulated transient failure on attempt 2 of first 5
+[PASS] permanent failure -> FAILED without retry -- status=FAILED attempt=1
+[PASS] Idempotency-Key replay returns same job
+[PASS] Idempotency-Key with different body -> 409
+[PASS] out-of-bounds payload -> 400 -- ['payload.durationMs must be between 0 and 15000']
+[PASS] non-allowlisted type -> 400
+[PASS] unknown job -> 404
+[PASS] cancel finished job -> 409
+[PASS] pagination is stable and non-overlapping -- total=76 pages=16
+[PASS] status filter returns failed jobs
+[PASS] FAILED jobs are on jobs.dlq.v1
+[PASS] DLQ event is sanitised (no payload)
+[PASS] duplicate dispatch events do not re-execute -- RUNNING x1, SUCCEEDED x1
+
+Observed: 15 jobs reached a terminal state in 7.9s wall-clock (single local run, includes the 3s SLEEP job and 1s+2s retry backoff; not a benchmark).
+
+32/32 checks passed in 23.1s
+exit code: 0

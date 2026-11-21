@@ -66,7 +66,7 @@ management:
     health:
       probes:
         enabled: true
-      show-details: ${HEALTH_SHOW_DETAILS:always}
+      show-details: ${HEALTH_SHOW_DETAILS:never}
   metrics:
     tags:
       application: ${spring.application.name}
@@ -88,4 +88,5 @@ orchestrator:
     poll-interval-ms: ${ORCHESTRATOR_OUTBOX_POLL_INTERVAL_MS:500}
     batch-size: ${ORCHESTRATOR_OUTBOX_BATCH_SIZE:50}
   kafka:
-    topic-partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+    # Effective parallelism = min(partitions, total listener threads across instances).
+    topic-partitions: ${KAFKA_TOPIC_PARTITIONS:6}
