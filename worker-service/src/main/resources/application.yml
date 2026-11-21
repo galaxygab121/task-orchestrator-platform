@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: worker-service
+  config:
+    import: classpath:orchestrator-defaults.yml
+  kafka:
+    consumer:
+      group-id: worker-service
+      properties:
+        # max task time (timeout) * max-poll-records must stay well below this
+        max.poll.interval.ms: 300000
+
+server:
+  port: ${SERVER_PORT:8082}
+
+worker:
+  concurrency: ${WORKER_CONCURRENCY:2}
+  task-timeout: ${WORKER_TASK_TIMEOUT:20s}
+  lease-duration: ${WORKER_LEASE_DURATION:30s}
+  heartbeat-interval: ${WORKER_HEARTBEAT_INTERVAL:10s}
+  instance-id: ${HOSTNAME:worker}
