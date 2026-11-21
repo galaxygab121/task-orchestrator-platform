@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: orchestrator-api
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["orchestrator-api:8080"]
+  - job_name: scheduler-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["scheduler-service:8081"]
+  - job_name: worker-service
+    metrics_path: /actuator/prometheus
+    # resolves to every replica when scaled with --scale worker-service=N
+    dns_sd_configs:
+      - names: ["worker-service"]
+        type: A
+        port: 8082

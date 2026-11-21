@@ -1,0 +1,92 @@
+# Shared defaults imported by every service via spring.config.import.
+# NOTE: imported values take precedence over the importing file, so services must not redefine these keys
+# in their own application.yml. Override at runtime with environment variables instead.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/orchestrator}
+    username: ${DB_USERNAME:orchestrator}
+    password: ${DB_PASSWORD:orchestrator}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    # Every service may run migrations; Flyway serialises concurrent runs with a Postgres advisory lock.
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.block.ms: 10000
+        delivery.timeout.ms: 30000
+        request.timeout.ms: 10000
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: ${KAFKA_MAX_POLL_RECORDS:5}
+    listener:
+      ack-mode: record
+  task:
+    scheduling:
+      pool:
+        size: 4
+      shutdown:
+        await-termination: true
+        await-termination-period: 20s
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: ${HEALTH_SHOW_DETAILS:never}
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    level: "%5p [jobId=%X{jobId:-}]"
+  level:
+    org.apache.kafka: WARN
+    org.hibernate.orm.deprecation: ERROR
+
+orchestrator:
+  retry:
+    initial-delay: ${ORCHESTRATOR_RETRY_INITIAL_DELAY:1s}
+    multiplier: ${ORCHESTRATOR_RETRY_MULTIPLIER:2.0}
+    max-delay: ${ORCHESTRATOR_RETRY_MAX_DELAY:8s}
+  outbox:
+    enabled: ${ORCHESTRATOR_OUTBOX_ENABLED:true}
+    poll-interval-ms: ${ORCHESTRATOR_OUTBOX_POLL_INTERVAL_MS:500}
+    batch-size: ${ORCHESTRATOR_OUTBOX_BATCH_SIZE:50}
+  kafka:
+    # Effective parallelism = min(partitions, total listener threads across instances).
+    topic-partitions: ${KAFKA_TOPIC_PARTITIONS:6}

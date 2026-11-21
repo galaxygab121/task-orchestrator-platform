@@ -1,0 +1,13 @@
+# python3 scripts/crash_recovery_demo.py   (2026-11-21T20:13Z, local Docker Desktop)
+submitted 39005cf7-1002-4ee2-9af7-68544bc7c73b
+job is RUNNING -> killing all worker containers with SIGKILL
+workers restarted; waiting for lease expiry and recovery ...
+final status SUCCEEDED on attempt 2, 60s after the kill; result={'sleptMs': 15000}
+
+20:13:15  None      -> SUBMITTED attempt=0  api                      accepted
+20:13:15  SUBMITTED -> QUEUED    attempt=1  scheduler                dispatched attempt 1
+20:13:15  QUEUED    -> RUNNING   attempt=1  3c9f35bf9c35-b8ec2b23    claimed by 3c9f35bf9c35-b8ec2b23
+20:13:49  RUNNING   -> QUEUED    attempt=2  lease-reaper             retry 2/3 in 1000ms: lease expired: worker 3c9f35bf9c35-b8ec2b23 stopped heartbeating
+20:14:00  QUEUED    -> RUNNING   attempt=2  3c9f35bf9c35-d5541029    claimed by 3c9f35bf9c35-d5541029
+20:14:15  RUNNING   -> SUCCEEDED attempt=2  3c9f35bf9c35-d5541029    succeeded on attempt 2
+exit code: 0
