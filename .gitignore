@@ -23,3 +23,7 @@ target/
 logs/
 scripts/__pycache__/
 .claude/settings.local.json
+
+# Local AI assistant brief (kept out of the repo)
+CLAUDE.md
+01_distributed_task_orchestration_CLAUDE.md
